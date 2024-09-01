@@ -1,7 +1,7 @@
 use std::any::Any;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use smithay_client_toolkit::reexports::client::protocol::wl_region::WlRegion;
 use smithay_client_toolkit::reexports::client::protocol::wl_buffer::WlBuffer;
 use smithay_client_toolkit::seat::keyboard::{Keysym, Modifiers};
 use smithay_client_toolkit::seat::pointer::AxisScroll;
@@ -19,29 +19,35 @@ pub trait Engine {
     /// Get the engine's unique ID.
     fn id(&self) -> EngineId;
 
+    /// Check if the engine requires a redraw.
+    fn dirty(&self) -> bool;
+
     /// Get the Wayland buffer for rendering the engine's current content.
     fn wl_buffer(&self) -> Option<&WlBuffer>;
 
-    /// Check if the engine requires a redraw.
-    fn dirty(&self) -> bool;
+    /// Get the Wayland buffer's current physical size.
+    fn buffer_size(&self) -> Size;
 
     /// Notify engine that the frame was completed.
     fn frame_done(&mut self);
 
+    /// Notify engine that a buffer was released.
+    fn buffer_released(&mut self, buffer: &WlBuffer);
+
+    /// Get the buffer's opaque region.
+    fn opaque_region(&self) -> Option<&WlRegion>;
+
     /// Update the browser engine's size.
     fn set_size(&mut self, size: Size);
-
-    /// Get the Wayland buffer's current physical size.
-    fn buffer_size(&self) -> Size;
 
     /// Update the browser engine's scale.
     fn set_scale(&mut self, scale: f64);
 
     /// Handle key down.
-    fn press_key(&mut self, raw: u32, keysym: Keysym, modifiers: Modifiers);
+    fn press_key(&mut self, time: u32, raw: u32, keysym: Keysym, modifiers: Modifiers);
 
     /// Handle key up.
-    fn release_key(&mut self, raw: u32, keysym: Keysym, modifiers: Modifiers);
+    fn release_key(&mut self, time: u32, raw: u32, keysym: Keysym, modifiers: Modifiers);
 
     /// Handle pointer axis scroll.
     fn pointer_axis(
@@ -59,39 +65,27 @@ pub trait Engine {
         time: u32,
         position: Position<f64>,
         button: u32,
-        state: u32,
+        down: bool,
         modifiers: Modifiers,
     );
 
     /// Handle pointer motion.
     fn pointer_motion(&mut self, time: u32, position: Position<f64>, modifiers: Modifiers);
 
+    /// Handle pointer enter.
+    fn pointer_enter(&mut self, position: Position<f64>, modifiers: Modifiers);
+
+    /// Handle pointer leave.
+    fn pointer_leave(&mut self, position: Position<f64>, modifiers: Modifiers);
+
     /// Handle touch press.
-    fn touch_up(
-        &mut self,
-        touch_points: &HashMap<i32, Position<f64>>,
-        time: u32,
-        id: i32,
-        modifiers: Modifiers,
-    );
+    fn touch_up(&mut self, time: u32, id: i32, position: Position<f64>, modifiers: Modifiers);
 
     /// Handle touch release.
-    fn touch_down(
-        &mut self,
-        touch_points: &HashMap<i32, Position<f64>>,
-        time: u32,
-        id: i32,
-        modifiers: Modifiers,
-    );
+    fn touch_down(&mut self, time: u32, id: i32, position: Position<f64>, modifiers: Modifiers);
 
     /// Handle touch motion.
-    fn touch_motion(
-        &mut self,
-        touch_points: &HashMap<i32, Position<f64>>,
-        time: u32,
-        id: i32,
-        modifiers: Modifiers,
-    );
+    fn touch_motion(&mut self, time: u32, id: i32, position: Position<f64>, modifiers: Modifiers);
 
     /// Load a new page.
     fn load_uri(&self, uri: &str);
@@ -115,7 +109,7 @@ pub trait Engine {
     fn commit_string(&mut self, text: String);
 
     /// Set preedit text at the current cursor position.
-    fn preedit_string(&mut self, text: String, cursor_begin: i32, cursor_end: i32);
+    fn set_preedit_string(&mut self, text: String, cursor_begin: i32, cursor_end: i32);
 
     /// Clear engine focus.
     fn clear_focus(&mut self);
@@ -125,12 +119,6 @@ pub trait Engine {
 
     /// Close option menu.
     fn close_option_menu(&mut self, menu_id: Option<OptionMenuId>);
-
-    /// Notify engine that entering fullscreen was successful.
-    fn confirm_enter_fullscreen(&mut self);
-
-    /// Notify engine that leaving fullscreen was successful.
-    fn confirm_leave_fullscreen(&mut self);
 
     fn as_any(&mut self) -> &mut dyn Any;
 }

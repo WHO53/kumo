@@ -198,7 +198,7 @@ pub struct KeyboardState {
     modifiers: Modifiers,
 
     queue: MtQueueHandle<State>,
-    current_repeat: Option<(Source, u32)>,
+    current_repeat: Option<CurrentRepeat>,
 }
 
 impl Drop for KeyboardState {
@@ -219,49 +219,69 @@ impl KeyboardState {
     }
 
     /// Handle new key press.
-    fn press_key(&mut self, raw: u32, keysym: Keysym) {
+    fn press_key(&mut self, time: u32, raw: u32, keysym: Keysym) {
         // Update key repeat timers.
         if !keysym.is_modifier_key() {
-            self.request_repeat(raw, keysym);
+            self.request_repeat(time, raw, keysym);
         }
     }
 
     /// Handle new key release.
     fn release_key(&mut self, raw: u32) {
         // Cancel repetition if released key is being repeated.
-        if self.current_repeat.as_ref().map_or(false, |repeat| repeat.1 == raw) {
+        if self.current_repeat.as_ref().map_or(false, |repeat| repeat.raw == raw) {
             self.cancel_repeat();
         }
     }
 
     /// Stage new key repetition.
     #[cfg_attr(feature = "profiling", profiling::function)]
-    fn request_repeat(&mut self, raw: u32, keysym: Keysym) {
+    fn request_repeat(&mut self, time: u32, raw: u32, keysym: Keysym) {
         // Ensure all previous events are cleared.
         self.cancel_repeat();
 
-        let (delay, rate) = match self.repeat_info {
+        let (delay_ms, rate) = match self.repeat_info {
             RepeatInfo::Repeat { delay, rate } => (delay, rate),
             _ => return,
         };
 
         // Stage timer for initial delay.
         let mut queue = self.queue.clone();
-        let delay = Duration::from_millis(delay as u64);
+        let delay = Duration::from_millis(delay_ms as u64);
         let delay_source = source::timeout_source_new(delay, None, Priority::DEFAULT, move || {
             queue.repeat_key(raw, keysym, rate.get() as u64);
             ControlFlow::Break
         });
         delay_source.attach(None);
 
-        self.current_repeat = Some((delay_source, raw));
+        self.current_repeat = Some(CurrentRepeat::new(delay_source, raw, time, delay_ms));
     }
 
     /// Cancel currently staged key repetition.
     fn cancel_repeat(&mut self) {
-        if let Some((source, ..)) = self.current_repeat.take() {
+        if let Some(CurrentRepeat { source, .. }) = self.current_repeat.take() {
             source.destroy();
         }
+    }
+}
+
+/// Active keyboard repeat state.
+pub struct CurrentRepeat {
+    source: Source,
+    interval: u32,
+    time: u32,
+    raw: u32,
+}
+
+impl CurrentRepeat {
+    pub fn new(source: Source, raw: u32, time: u32, interval: u32) -> Self {
+        Self { source, time, interval, raw }
+    }
+
+    /// Get the next key event timestamp.
+    pub fn next_time(&mut self) -> u32 {
+        self.time += self.interval;
+        self.time
     }
 }
 

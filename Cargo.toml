@@ -17,7 +17,6 @@ members = [
     "funq",
     "funq/funq_derive",
     "libwpe-sys",
-    "wpe-backend-fdo-sys",
     "wpe-jsc",
     "wpe-jsc-sys",
     "wpe-platform",
@@ -65,8 +64,8 @@ thiserror = "1.0.57"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 wayland-backend = { version = "=0.3.4", features = ["client_system"] }
-wpe-backend-fdo-sys = { path = "./wpe-backend-fdo-sys" }
 wpe-webkit = { path = "./wpe-webkit" }
+wpe-platform = { path = "./wpe-platform" }
 
 [build-dependencies]
 gl_generator = "0.14.0"

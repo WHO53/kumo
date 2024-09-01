@@ -846,7 +846,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wayland-backend",
- "wpe-backend-fdo-sys",
+ "wpe-platform",
  "wpe-webkit",
 ]
 
@@ -2501,14 +2501,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "wpe-backend-fdo-sys"
-version = "0.1.0"
-dependencies = [
- "libwpe-sys",
- "pkg-config",
-]
-
-[[package]]
 name = "wpe-jsc"
 version = "0.1.0"
 dependencies = [
@@ -2534,6 +2526,7 @@ name = "wpe-platform"
 version = "0.1.0"
 dependencies = [
  "glib",
+ "glib-sys",
  "gobject-sys",
  "libc",
  "wpe-platform-sys",
