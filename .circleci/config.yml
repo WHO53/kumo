@@ -30,7 +30,7 @@ jobs:
           no_output_timeout: 60m
           command: |
             mkdir -p /tmp/buildd-results
-            git clone "https://github.com/WHO53/kumo.git" --depth=1 sources
+            git clone "https://github.com/catacombing/tzompantli.git" --depth=1 sources
             ls sources
             docker run \
               --rm \
@@ -55,8 +55,8 @@ jobs:
             
             git clone https://$PAT@github.com/WHO53/apt.git --depth=1
             cd apt/
-            rm -f kumo
-            cp ../sources/target/release/kumo .
+            rm -f tzompantli
+            cp ../sources/target/release/tzompantli .
             git add -A
             git commit -m "Circle CI: ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1:0:7}"
             git push origin main
